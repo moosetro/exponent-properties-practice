@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Exponent Properties Practice</title>
+<style>
+  :root{
+    --bg:#f7f7f2; --panel:#ffffff; --panel2:#f0eff5; --text:#121a2b; --muted:#687083;
+    --line:#d8d9df; --accent:#6a4593; --accent2:#8a67bc; --blue:#76a2c5;
+    --orange:#d55d33; --gold:#ea9a4a; --good:#2f7d59; --bad:#b94b49;
+    --shadow:0 12px 30px rgba(18,26,43,.10); --radius:18px;
+  }
+  body.dark{
+    --bg:#121a2b; --panel:#192238; --panel2:#222d45; --text:#f7f7f2; --muted:#b9bfcc;
+    --line:#34415d; --accent:#8a67bc; --accent2:#a88bc8; --blue:#76a2c5;
+    --orange:#e17249; --gold:#f0ae63; --good:#74c69d; --bad:#f08a87;
+    --shadow:0 14px 34px rgba(0,0,0,.28);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+  button,input{font:inherit}
+  button{cursor:pointer}
+  .app{display:grid;grid-template-columns:310px minmax(0,1fr);min-height:100vh}
+  aside{border-right:1px solid var(--line);padding:28px 22px;background:color-mix(in srgb,var(--panel) 86%,var(--bg));position:sticky;top:0;height:100vh;overflow:auto}
+  main{padding:42px clamp(24px,4vw,64px)}
+  h1{font-size:clamp(30px,3.5vw,50px);line-height:1.02;margin:0 0 8px;letter-spacing:-.04em}
+  .subtitle{color:var(--muted);font-size:17px;margin-bottom:28px}
+  h2{font-size:18px;margin:26px 0 10px}
+  .seg{display:flex;gap:7px;flex-wrap:wrap}
+  .seg button,.choice-pill{border:1px solid var(--line);background:var(--panel);color:var(--text);padding:9px 11px;border-radius:10px;font-weight:650}
+  .seg button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .control-list{display:grid;gap:8px}
+  label.radio,label.check{display:flex;align-items:flex-start;gap:9px;font-size:14px;line-height:1.35;cursor:pointer}
+  input[type=radio],input[type=checkbox]{accent-color:var(--accent);margin-top:2px}
+  .mini{font-size:12px;color:var(--muted)}
+  .property-grid{display:grid;gap:7px}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:10px}
+  .stat{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+  .stat strong{display:block;font-size:20px}.stat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .reset{width:100%;margin-top:10px;border:1px solid var(--line);background:transparent;color:var(--muted);padding:9px;border-radius:10px}
+  .practice-shell{max-width:1000px;margin:0 auto}
+  .toprow{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap;margin-bottom:18px}
+  .mode-title{font-size:26px;font-weight:800;letter-spacing:-.02em}.mode-sub{color:var(--muted);margin-top:5px}
+  .mini-stats{display:flex;gap:15px;color:var(--muted);font-size:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .card-head{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line);background:var(--panel2)}
+  .eyebrow{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.10em;font-weight:800}
+  .difficulty-badge{font-size:12px;font-weight:800;border:1px solid var(--line);padding:6px 9px;border-radius:999px}
+  .problem-area{padding:clamp(28px,5vw,54px)}
+  .prompt{font-size:15px;color:var(--muted);text-align:center;margin-bottom:18px}
+  .expression{font-family:"Cambria Math","STIX Two Math",Georgia,serif;font-size:clamp(34px,6vw,62px);font-weight:600;text-align:center;line-height:1.28;min-height:90px;display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:.12em}
+  sup{font-size:.62em;vertical-align:.55em;line-height:0}
+  .frac{display:inline-grid;grid-template-rows:auto auto;vertical-align:middle;text-align:center;line-height:1.05;margin:0 .12em}.frac .num{border-bottom:2px solid currentColor;padding:0 .18em .10em}.frac .den{padding:.10em .18em 0}
+  .root{display:inline-flex;align-items:flex-start}.root .index{font-size:.42em;transform:translate(.18em,.0em)}.root .radical{font-size:1.12em;line-height:1}.root .radicand{border-top:2px solid currentColor;padding:.02em .12em 0 .06em;margin-top:.10em}
+  .answers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:30px}
+  .answer-btn{min-height:64px;border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:13px;padding:13px 16px;font-family:"Cambria Math",Georgia,serif;font-size:23px;font-weight:600;transition:.16s ease}
+  .answer-btn:hover:not(:disabled){border-color:var(--accent);transform:translateY(-1px)}
+  .answer-btn.correct{border-color:var(--good);background:color-mix(in srgb,var(--good) 13%,var(--panel));color:var(--good)}
+  .answer-btn.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,var(--panel));color:var(--bad)}
+  .answer-btn:disabled{cursor:default}
+  .builder{margin-top:28px}
+  .build-zone{min-height:74px;border:2px dashed var(--line);border-radius:14px;padding:12px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;background:var(--panel2)}
+  .build-zone.empty::before{content:"Click pieces below to build the fully simplified answer.";color:var(--muted);font-size:14px;font-family:Inter,sans-serif}
+  .piece-bank{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:14px}.piece{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:9px;padding:9px 12px;font-family:"Cambria Math",Georgia,serif;font-size:20px}
+  .placed{background:var(--accent);border-color:var(--accent);color:#fff}
+  .type-wrap{max-width:560px;margin:28px auto 0}.type-input{width:100%;border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:12px;padding:15px 16px;font-family:"Cambria Math",Georgia,serif;font-size:22px;outline:none}.type-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent)}
+  .hint{font-size:13px;color:var(--muted);margin-top:8px;text-align:center}
+  .actions{display:flex;justify-content:center;gap:10px;margin-top:22px}.primary,.secondary{border-radius:11px;padding:11px 18px;font-weight:800}.primary{background:var(--accent);border:1px solid var(--accent);color:#fff}.secondary{background:transparent;border:1px solid var(--line);color:var(--text)}
+  .feedback{margin-top:26px;border-radius:14px;padding:17px 18px;border:1px solid var(--line);display:none}.feedback.show{display:block}.feedback.good{border-color:color-mix(in srgb,var(--good) 45%,var(--line));background:color-mix(in srgb,var(--good) 8%,var(--panel))}.feedback.bad{border-color:color-mix(in srgb,var(--bad) 45%,var(--line));background:color-mix(in srgb,var(--bad) 7%,var(--panel))}
+  .feedback-title{font-weight:850;margin-bottom:7px}.steps{display:grid;gap:7px;margin-top:11px}.step{font-family:"Cambria Math",Georgia,serif;font-size:17px}.step small{font-family:Inter,sans-serif;color:var(--muted);font-size:12px;margin-right:7px}
+  .rule-note{margin-top:10px;color:var(--muted);font-size:13px}
+  .footer-actions{display:flex;justify-content:flex-end;margin-top:16px}.new-btn{border:1px solid var(--accent);background:var(--accent);color:white;padding:11px 18px;border-radius:11px;font-weight:800}
+  .property-name{font-family:Inter,sans-serif;font-size:16px}
+  .kbd{display:inline-block;border:1px solid var(--line);background:var(--panel2);padding:1px 5px;border-radius:5px;font-size:12px}
+  @media(max-width:800px){.app{display:block}aside{position:relative;height:auto;border-right:0;border-bottom:1px solid var(--line)}main{padding:26px 14px}.answers{grid-template-columns:1fr}.expression{font-size:38px}.problem-area{padding:28px 18px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside>
+  <div class="eyebrow">Algebra Practice</div>
+  <h1 style="font-size:31px;margin-top:5px">Exponent Properties</h1>
+  <div class="subtitle" style="font-size:14px;margin-bottom:18px">Simplify completely and connect exponent notation to radical form.</div>
+
+  <h2>Difficulty</h2>
+  <div class="seg" id="difficultySeg">
+    <button data-diff="basic">Basic</button><button data-diff="intermediate">Intermediate</button><button data-diff="advanced">Advanced</button><button data-diff="mixed" class="active">Mixed</button>
+  </div>
+
+  <h2>Practice mode</h2>
+  <div class="control-list" id="modeControls">
+    <label class="radio"><input type="radio" name="mode" value="mc4" checked> Recognition — 4 choices</label>
+    <label class="radio"><input type="radio" name="mode" value="mc6"> Recognition — 6 choices</label>
+    <label class="radio"><input type="radio" name="mode" value="build"> Build the answer</label>
+    <label class="radio"><input type="radio" name="mode" value="type"> Type the answer</label>
+    <label class="radio"><input type="radio" name="mode" value="identify"> Identify the property</label>
+  </div>
+
+  <h2>Properties</h2>
+  <div class="seg" style="margin-bottom:10px"><button id="allProps" class="active">All</button><button id="coreProps">Core</button></div>
+  <div class="property-grid" id="propertyChecks"></div>
+
+  <h2>Appearance</h2>
+  <div class="seg"><button id="lightBtn" class="active">Light</button><button id="darkBtn">Dark</button></div>
+
+  <h2>Session</h2>
+  <div class="stats"><div class="stat"><strong id="sideCorrect">0</strong><span>Correct</span></div><div class="stat"><strong id="sideAttempted">0</strong><span>Attempted</span></div><div class="stat"><strong id="sideStreak">0</strong><span>Streak</span></div></div>
+  <button class="reset" id="resetStats">Reset session stats</button>
+</aside>
+
+<main>
+<div class="practice-shell">
+  <div class="toprow">
+    <div><div class="mode-title" id="modeTitle">Simplify the expression</div><div class="mode-sub" id="modeSub">Use exponent properties and give a fully simplified result.</div></div>
+    <div class="mini-stats"><span><b id="miniCorrect">0</b> correct</span><span><b id="miniAttempted">0</b> attempted</span><span id="accuracy">— accuracy</span></div>
+  </div>
+
+  <section class="card">
+    <div class="card-head"><span class="eyebrow" id="cardLabel">Problem</span><span class="difficulty-badge" id="diffBadge">Mixed</span></div>
+    <div class="problem-area">
+      <div class="prompt" id="prompt">Simplify completely. Use positive exponents in your final answer.</div>
+      <div class="expression" id="expression"></div>
+      <div id="responseArea"></div>
+      <div class="feedback" id="feedback"><div class="feedback-title" id="feedbackTitle"></div><div id="feedbackBody"></div></div>
+      <div class="footer-actions"><button class="new-btn" id="newProblem">New problem</button></div>
+    </div>
+  </section>
+</div>
+</main>
+</div>
+
+<script>
+(() => {
+const PROPS = {
+  product:{name:'Product of powers', short:'Product rule', formula:'a^m · a^n = a^(m+n)', core:true},
+  quotient:{name:'Quotient of powers', short:'Quotient rule', formula:'a^m / a^n = a^(m−n)', core:true},
+  power:{name:'Power of a power', short:'Power rule', formula:'(a^m)^n = a^(mn)', core:true},
+  productPower:{name:'Power of a product', short:'Power of a product', formula:'(ab)^n = a^n b^n', core:true},
+  quotientPower:{name:'Power of a quotient', short:'Power of a quotient', formula:'(a/b)^n = a^n / b^n', core:false},
+  zero:{name:'Zero exponent', short:'Zero exponent rule', formula:'a^0 = 1', core:true},
+  negative:{name:'Negative exponents', short:'Negative exponent rule', formula:'a^(−n) = 1/a^n', core:false},
+  rational:{name:'Rational exponents', short:'Rational exponent rule', formula:'a^(m/n) = ⁿ√(a^m)', core:false},
+  radical:{name:'Radical ↔ rational exponent', short:'Radical conversion', formula:'ⁿ√(a^m) ↔ a^(m/n)', core:false}
+};
+const state={difficulty:'mixed',mode:'mc4',correct:0,attempted:0,streak:0,current:null,answered:false,build:[]};
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const ri=(a,b)=>Math.floor(Math.random()*(b-a+1))+a, pick=a=>a[Math.floor(Math.random()*a.length)], shuffle=a=>[...a].sort(()=>Math.random()-.5);
+const sup=n=>`<sup>${String(n).replace('-','−')}</sup>`;
+const pow=(b,e)=>`${b}${sup(e)}`;
+const frac=(n,d)=>`<span class="frac"><span class="num">${n}</span><span class="den">${d}</span></span>`;
+const root=(idx,rad)=>`<span class="root">${idx===2?'':`<span class="index">${idx}</span>`}<span class="radical">√</span><span class="radicand">${rad}</span></span>`;
+const textPow=(b,e)=>`${b}^${e}`;
+const gcd=(a,b)=>b?gcd(b,a%b):Math.abs(a);
+function norm(s){return String(s).toLowerCase().replace(/\s+/g,'').replace(/[−–]/g,'-').replace(/·|×/g,'*').replace(/\*/g,'').replace(/[()]/g,'').replace(/\*1(?=$|\/)/g,'').replace(/\^1(?!\d)/g,'').replace(/sqrt\[(\d+)\]\{([^}]+)\}/g,'sqrt$1($2)');}
+function htmlFromText(s){
+  if(s.includes('ROOT:')){ const [,idx,rad]=s.match(/ROOT:(\d+):(.+)/); return root(+idx, rad.replace(/\^([\-\d/]+)/g,(_,e)=>sup(e))); }
+  let t=s.replace(/\^\(([^)]+)\)/g,(_,e)=>sup(e)).replace(/\^(-?\d+(?:\/\d+)?)/g,(_,e)=>sup(e));
+  return t;
+}
+function canonicalVariants(ans){
+  let out=[norm(ans)];
+  if(ans.includes('*')) out.push(norm(ans.replace(/\*/g,'')));
+  return [...new Set(out)];
+}
+function q(obj){obj.accept=obj.accept||canonicalVariants(obj.answer);obj.propertyName=PROPS[obj.prop]?.name||'';return obj;}
+
+function genSingle(prop,diff){
+  const v=pick(['x','y','a','b']);
+  const w=pick(['m','n','p']);
+  const useNum=Math.random()<.34;
+  if(prop==='product'){
+    let m=ri(2,6),n=ri(2,6); if(useNum){let b=pick([2,3,5]);let val=b**(m+n);return q({prop,prompt:'Simplify completely.',display:`${pow(b,m)} · ${pow(b,n)}`,answer:String(val),displayAnswer:String(val),steps:[`${b}<sup>${m}</sup> · ${b}<sup>${n}</sup> = ${b}<sup>${m+n}</sup>`,`= ${val}`],wrong:[String(b**m+b**n),String(b**(m*n)),`${b}<sup>${m+n}</sup>`]});}
+    let coeff=diff==='basic'?1:pick([2,3,4]);let coeff2=diff==='basic'?1:pick([2,3,5]);let c=coeff*coeff2;let display=`${coeff===1?'':coeff}${pow(v,m)} · ${coeff2===1?'':coeff2}${pow(v,n)}`;let ans=`${c===1?'':c}${v}^${m+n}`;return q({prop,prompt:'Simplify completely.',display,answer:ans,displayAnswer:`${c===1?'':c}${pow(v,m+n)}`,steps:[`${pow(v,m)} · ${pow(v,n)} = ${pow(v,m+n)}`,c>1?`Multiply coefficients: ${coeff} · ${coeff2} = ${c}`:'Combine like bases.'],wrong:[`${c}${pow(v,m*n)}`,`${c}${pow(v,m+n+1)}`,`${coeff+coeff2}${pow(v,m+n)}`]});
+  }
+  if(prop==='quotient'){
+    let m=ri(5,9),n=ri(1,4); if(diff!=='basic'&&Math.random()<.35){[m,n]=[ri(1,3),ri(4,7)];}
+    if(useNum && m>=n){let b=pick([2,3]);let val=b**(m-n);return q({prop,prompt:'Simplify completely.',display:frac(pow(b,m),pow(b,n)),answer:String(val),displayAnswer:String(val),steps:[`${b}<sup>${m}</sup> / ${b}<sup>${n}</sup> = ${b}<sup>${m-n}</sup>`,`= ${val}`],wrong:[String(b**(m+n)),String(b**Math.abs(m-n)+1),`${b}<sup>${m-n}</sup>`]});}
+    let e=m-n;if(e>=0){let ans=e===0?'1':`${v}^${e}`;return q({prop,prompt:'Simplify completely.',display:frac(pow(v,m),pow(v,n)),answer:ans,displayAnswer:e===0?'1':pow(v,e),steps:[`${pow(v,m)} / ${pow(v,n)} = ${pow(v,e)}`,e===0?`${v}<sup>0</sup> = 1`:'The exponent is already positive.'],wrong:[pow(v,m+n),pow(v,m*n),pow(v,Math.abs(e)+1)]});}
+    let pos=-e;return q({prop,prompt:'Simplify completely. Use positive exponents.',display:frac(pow(v,m),pow(v,n)),answer:`1/${v}^${pos}`,displayAnswer:frac('1',pow(v,pos)),accept:[norm(`1/${v}^${pos}`),norm(`${v}^-${pos}`)].filter((x,i)=>i===0),steps:[`${pow(v,m)} / ${pow(v,n)} = ${pow(v,e)}`,`${pow(v,e)} = ${frac('1',pow(v,pos))}`],wrong:[pow(v,pos),pow(v,m+n),frac('1',pow(v,m+n))]});
+  }
+  if(prop==='power'){
+    let m=ri(2,5),n=ri(2,4);if(useNum){let b=2,val=b**(m*n);return q({prop,prompt:'Simplify completely.',display:`(${pow(b,m)})${sup(n)}`,answer:String(val),displayAnswer:String(val),steps:[`(${pow(b,m)})${sup(n)} = ${pow(b,m*n)}`,`= ${val}`],wrong:[String(b**(m+n)),String((b**m)*n),pow(b,m*n)]});}
+    return q({prop,prompt:'Simplify completely.',display:`(${pow(v,m)})${sup(n)}`,answer:`${v}^${m*n}`,displayAnswer:pow(v,m*n),steps:[`Multiply the exponents: ${m} · ${n} = ${m*n}`,`(${pow(v,m)})${sup(n)} = ${pow(v,m*n)}`],wrong:[pow(v,m+n),pow(v,m**n),pow(v,m*n+1)]});
+  }
+  if(prop==='productPower'){
+    let n=ri(2,4),a=ri(2,5);return q({prop,prompt:'Simplify completely.',display:`(${a}${v}${w})${sup(n)}`,answer:`${a**n}${v}^${n}${w}^${n}`,displayAnswer:`${a**n}${pow(v,n)}${pow(w,n)}`,steps:[`Apply the exponent to every factor.`,`${a}<sup>${n}</sup>${pow(v,n)}${pow(w,n)} = ${a**n}${pow(v,n)}${pow(w,n)}`],wrong:[`${a*n}${pow(v,n)}${pow(w,n)}`,`${a**n}${pow(v,n)}${w}`,`${a}${pow(v,n)}${pow(w,n)}`]});
+  }
+  if(prop==='quotientPower'){
+    let n=ri(2,4),a=pick([2,3]),b=pick([4,5]);return q({prop,prompt:'Simplify completely.',display:`(${frac(`${a}${v}`,`${b}${w}`)})${sup(n)}`,answer:`${a**n}${v}^${n}/${b**n}${w}^${n}`,displayAnswer:frac(`${a**n}${pow(v,n)}`,`${b**n}${pow(w,n)}`),steps:[`Raise the numerator and denominator to the ${n} power.`,`${frac(`${a}<sup>${n}</sup>${pow(v,n)}`,`${b}<sup>${n}</sup>${pow(w,n)}`)} = ${frac(`${a**n}${pow(v,n)}`,`${b**n}${pow(w,n)}`)}`],wrong:[frac(`${a*n}${pow(v,n)}`,`${b*n}${pow(w,n)}`),frac(`${a**n}${pow(v,n)}`,`${b}${pow(w,n)}`),frac(`${a**n}${v}`,`${b**n}${w}`)]});
+  }
+  if(prop==='zero'){
+    let inside=pick([v,`${ri(2,8)}${v}`,`(${v}${w})`,`(${ri(2,5)}${v}/${ri(2,5)})`]);return q({prop,prompt:'Simplify completely.',display:`${inside}${sup(0)}`,answer:'1',displayAnswer:'1',steps:[`Any nonzero base raised to the zero power equals 1.`],wrong:['0',inside,`−1`]});
+  }
+  if(prop==='negative'){
+    let n=ri(2,6),coef=Math.random()<.35?ri(2,5):1;if(coef===1){return q({prop,prompt:'Rewrite using positive exponents.',display:pow(v,-n),answer:`1/${v}^${n}`,displayAnswer:frac('1',pow(v,n)),steps:[`${pow(v,-n)} = ${frac('1',pow(v,n))}`],wrong:[pow(v,n),`−${pow(v,n)}`,frac('1',pow(v,n+1))]});}
+    return q({prop,prompt:'Simplify completely. Use positive exponents.',display:`${coef}${pow(v,-n)}`,answer:`${coef}/${v}^${n}`,displayAnswer:frac(String(coef),pow(v,n)),steps:[`Move the factor with the negative exponent to the denominator.`,`${coef}${pow(v,-n)} = ${frac(String(coef),pow(v,n))}`],wrong:[frac('1',`${coef}${pow(v,n)}`),`${coef}${pow(v,n)}`,frac(String(coef),pow(v,n+1))]});
+  }
+  if(prop==='rational'){
+    let den=pick([2,3,4,5]),num=ri(1,den===2?1:den-1);if(diff==='advanced'&&Math.random()<.5) num=ri(den+1,den+3);
+    return q({prop,prompt:'Rewrite in radical form.',display:pow(v,`${num}/${den}`),answer:`root${den}(${v}^${num})`,displayAnswer:root(den,pow(v,num)),accept:[norm(`root${den}(${v}^${num})`),norm(`sqrt${den}(${v}^${num})`),...(num===1?[norm(`sqrt${den}(${v})`),norm(`root${den}(${v})`)]:[])],steps:[`The denominator ${den} is the root index.`,`The numerator ${num} becomes the power: ${root(den,pow(v,num))}`],wrong:[root(num,pow(v,den)),root(den,pow(v,den)),root(num,pow(v,num))]});
+  }
+  if(prop==='radical'){
+    let den=pick([2,3,4,5]),num=ri(1,den===2?1:den-1);return q({prop,prompt:'Rewrite using a rational exponent.',display:root(den,pow(v,num)),answer:`${v}^${num}/${den}`,displayAnswer:pow(v,`${num}/${den}`),accept:[norm(`${v}^${num}/${den}`),norm(`${v}^(${num}/${den})`)],steps:[`The root index ${den} becomes the denominator.`,`The power ${num} becomes the numerator: ${pow(v,`${num}/${den}`)}`],wrong:[pow(v,`${den}/${num}`),pow(v,`${num*den}`),pow(v,`${den}`)]});
+  }
+}
+
+function genAdvanced(){
+ const v=pick(['x','y','a']),w=pick(['m','n','b']),type=ri(1,5);
+ if(type===1){let p=ri(2,4),qv=ri(2,4),r=ri(1,3),c=pick([2,3]);let e=p*qv-r;let c2=c**qv;return q({prop:'power',prompt:'Simplify completely. Use positive exponents.',display:frac(`(${c}${pow(v,p)})${sup(qv)}`,pow(v,r)),answer:`${c2}${v}^${e}`,displayAnswer:`${c2}${pow(v,e)}`,steps:[`Power of a product: (${c}${pow(v,p)})${sup(qv)} = ${c2}${pow(v,p*qv)}`,`Quotient rule: ${pow(v,p*qv)} / ${pow(v,r)} = ${pow(v,e)}`,`Final: ${c2}${pow(v,e)}`],wrong:[`${c*qv}${pow(v,e)}`,`${c2}${pow(v,p*qv+r)}`,`${c2}${pow(v,p*qv)} `]});}
+ if(type===2){let a=ri(2,5),b=ri(1,3),c=ri(4,7),d=ri(1,3);let ex=a-c,ey=b+d;let ans=ex>=0?`${v}^${ex}${w}^${ey}`:`${w}^${ey}/${v}^${-ex}`;let disp=ex>=0?`${pow(v,ex)}${pow(w,ey)}`:frac(pow(w,ey),pow(v,-ex));return q({prop:'quotient',prompt:'Simplify completely. Use positive exponents.',display:frac(`${pow(v,a)}${pow(w,b)}`,`${pow(v,c)}${pow(w,-d)}`),answer:ans,displayAnswer:disp,steps:[`${v}: ${a} − ${c} = ${ex}`,`${w}: ${b} − (−${d}) = ${ey}`,ex<0?`Move ${pow(v,ex)} to the denominator: ${disp}`:`Final: ${disp}`],wrong:[`${pow(v,a+c)}${pow(w,b+d)}`,frac(pow(v,-ex),pow(w,ey)),`${pow(v,Math.abs(ex))}${pow(w,b-d)}`]});}
+ if(type===3){let p=ri(2,4),n=pick([2,3]),m=ri(1,n-1);let total=p*m;let g=gcd(total,n),nn=total/g,dd=n/g;return q({prop:'rational',prompt:'Simplify the exponent.',display:`(${pow(v,p)})${sup(`${m}/${n}`)}`,answer:`${v}^${dd===1?nn:`${nn}/${dd}`}`,displayAnswer:pow(v,dd===1?nn:`${nn}/${dd}`),steps:[`Power of a power: multiply ${p} · ${m}/${n} = ${total}/${n}.`,g>1?`Reduce ${total}/${n} to ${dd===1?nn:`${nn}/${dd}`}.`:'The exponent is already reduced.'],wrong:[pow(v,`${p+m}/${n}`),pow(v,`${p}/${m*n}`),pow(v,`${p*n}/${m}`)]});}
+ if(type===4){let p=ri(2,4),qv=ri(1,3);return q({prop:'negative',prompt:'Simplify completely. Use positive exponents.',display:`(${frac(pow(v,-p),pow(w,-qv))})`,answer:`${w}^${qv}/${v}^${p}`,displayAnswer:frac(pow(w,qv),pow(v,p)),steps:[`${pow(v,-p)} = ${frac('1',pow(v,p))} and ${frac('1',pow(w,-qv))} = ${pow(w,qv)}.`,`Final: ${frac(pow(w,qv),pow(v,p))}`],wrong:[frac(pow(v,p),pow(w,qv)),frac('1',`${pow(v,p)}${pow(w,qv)}`),`${pow(v,p)}${pow(w,qv)}`]});}
+ let n=pick([2,3]),p=ri(2,4),c=pick([2,3]);return q({prop:'productPower',prompt:'Simplify completely.',display:`(${c}${pow(v,p)}${w})${sup(n)}`,answer:`${c**n}${v}^${p*n}${w}^${n}`,displayAnswer:`${c**n}${pow(v,p*n)}${pow(w,n)}`,steps:[`Apply the outer exponent to each factor.`,`Coefficient: ${c}<sup>${n}</sup> = ${c**n}`,`${v}: ${p} · ${n} = ${p*n}`,`Final: ${c**n}${pow(v,p*n)}${pow(w,n)}`],wrong:[`${c*n}${pow(v,p*n)}${pow(w,n)}`,`${c**n}${pow(v,p+n)}${pow(w,n)}`,`${c**n}${pow(v,p*n)}${w}`]});
+}
+
+function allowedProps(){return $$('#propertyChecks input:checked').map(x=>x.value)}
+function generate(){
+  state.answered=false; state.build=[]; $('#feedback').className='feedback'; $('#feedback').innerHTML='<div class="feedback-title" id="feedbackTitle"></div><div id="feedbackBody"></div>';
+  let props=allowedProps(); if(!props.length){props=Object.keys(PROPS);Object.keys(PROPS).forEach(k=>document.querySelector(`input[value="${k}"]`).checked=true)}
+  const basicEligible=['product','quotient','power','productPower','quotientPower'];
+  let eligible=state.difficulty==='basic'?props.filter(k=>basicEligible.includes(k)):props;
+  if(!eligible.length) eligible=props;
+  let p=pick(eligible),problem;
+  // Identification questions show a single clean transformation so exactly one named rule is defensible.
+  if(state.mode==='identify') problem=genSingle(p,state.difficulty==='advanced'?'intermediate':state.difficulty);
+  else if(state.difficulty==='advanced' && !['rational','radical','zero'].includes(p) && Math.random()<.72) problem=genAdvanced();
+  else if(state.difficulty==='mixed' && Math.random()<.35) problem=genAdvanced();
+  else problem=genSingle(p,state.difficulty);
+  state.current=problem; render();
+}
+function render(){
+ const c=state.current, mode=state.mode;
+ $('#expression').innerHTML=c.display; $('#prompt').textContent= mode==='identify'?'Which exponent property justifies this step?':c.prompt;
+ $('#diffBadge').textContent=state.difficulty[0].toUpperCase()+state.difficulty.slice(1); $('#responseArea').innerHTML='';
+ if(mode==='identify') renderIdentify(); else if(mode==='mc4'||mode==='mc6') renderMC(mode==='mc4'?4:6); else if(mode==='build') renderBuild(); else renderType();
+ updateTitles();
+}
+function updateTitles(){let map={mc4:['Simplify the expression','Choose the fully simplified result.'],mc6:['Simplify the expression','Choose the fully simplified result.'],build:['Build the simplified form','Construct the answer from expression pieces.'],type:['Type the simplified form','Enter a fully simplified result.'],identify:['Identify the property','Name the exponent rule used in the transformation.']};$('#modeTitle').textContent=map[state.mode][0];$('#modeSub').textContent=map[state.mode][1]}
+function renderMC(count){let c=state.current,opts=[{html:c.displayAnswer,key:'correct'}];let wrong=[...(c.wrong||[])];const fallback=['1','0','x',pow('x',2),frac('1',pow('x',2)),pow('x','1/2')];while(wrong.length<count-1)wrong.push(pick(fallback));wrong=wrong.slice(0,count-1);opts.push(...wrong.map((h,i)=>({html:h,key:'w'+i})));opts=shuffle(opts);let box=document.createElement('div');box.className='answers';opts.forEach(o=>{let b=document.createElement('button');b.className='answer-btn';b.innerHTML=o.html;b.onclick=()=>answer(o.key==='correct',b);box.appendChild(b)});$('#responseArea').appendChild(box)}
+function renderIdentify(){
+ let c=state.current; let left=c.display, right=c.displayAnswer; $('#expression').innerHTML=`${left}<span style="font-family:Inter;font-size:.55em;color:var(--muted);margin:0 .35em">→</span>${right}`;
+ let names=shuffle([c.prop,...shuffle(Object.keys(PROPS).filter(k=>k!==c.prop)).slice(0,3)]);let box=document.createElement('div');box.className='answers';names.forEach(k=>{let b=document.createElement('button');b.className='answer-btn property-name';b.textContent=PROPS[k].name;b.onclick=()=>answer(k===c.prop,b);box.appendChild(b)});$('#responseArea').appendChild(box)
+}
+function makeBuildTokens(answer){
+ let a=answer;
+ if(/^\d+$/.test(a)) return shuffle([a,String(+a+1),String(Math.max(1,+a-1)),'1']);
+ if(a.startsWith('root')){let m=a.match(/root(\d+)\((.+)\)/);return shuffle([`root${m[1]}(`,m[2],')',`root${+m[1]+1}(`,'x', '^2']);}
+ let tokens=[]; let parts=a.match(/[a-z]+\^-?\d+(?:\/\d+)?|\d+|[a-z]+|\/|\*|\^|-?\d+\/\d+/g);if(parts)tokens=parts;
+ const extras=['1','2','x','y','/','^2','^3'];return shuffle([...tokens,...shuffle(extras).slice(0,3)]);
+}
+function renderBuild(){let c=state.current;let wrap=document.createElement('div');wrap.className='builder';wrap.innerHTML='<div class="build-zone empty" id="buildZone"></div><div class="piece-bank" id="pieceBank"></div><div class="hint">Click a placed piece to remove it. Build from left to right.</div><div class="actions"><button class="secondary" id="clearBuild">Clear</button><button class="primary" id="checkBuild">Check answer</button></div>';$('#responseArea').appendChild(wrap);makeBuildTokens(c.answer).forEach(t=>{let b=document.createElement('button');b.className='piece';b.textContent=t;b.onclick=()=>{state.build.push(t);renderBuildZone()};$('#pieceBank').appendChild(b)});$('#clearBuild').onclick=()=>{state.build=[];renderBuildZone()};$('#checkBuild').onclick=()=>checkText(state.build.join(''));}
+function renderBuildZone(){let z=$('#buildZone');z.innerHTML='';z.classList.toggle('empty',!state.build.length);state.build.forEach((t,i)=>{let b=document.createElement('button');b.className='piece placed';b.textContent=t;b.onclick=()=>{state.build.splice(i,1);renderBuildZone()};z.appendChild(b)})}
+function renderType(){let c=state.current;let div=document.createElement('div');div.className='type-wrap';div.innerHTML=`<input class="type-input" id="typeInput" autocomplete="off" placeholder="Type your answer"><div class="hint">Use ^ for exponents, / for fractions, and root3(x^2) for ∛(x²). Parentheses are optional around fractional exponents.</div><div class="actions"><button class="primary" id="checkType">Check answer</button></div>`;$('#responseArea').appendChild(div);$('#checkType').onclick=()=>checkText($('#typeInput').value);$('#typeInput').addEventListener('keydown',e=>{if(e.key==='Enter')checkText(e.target.value)});setTimeout(()=>$('#typeInput').focus(),0)}
+function checkText(val){if(state.answered)return;let ok=state.current.accept.includes(norm(val));answer(ok,null)}
+function answer(ok,button){if(state.answered)return;state.answered=true;state.attempted++;if(ok){state.correct++;state.streak++}else state.streak=0;updateStats();
+ if(button){button.classList.add(ok?'correct':'wrong');$$('.answer-btn').forEach(b=>b.disabled=true);if(!ok){$$('.answer-btn').forEach(b=>{if(norm(b.innerText)===norm(state.current.displayAnswer.replace(/<[^>]+>/g,''))){} });}}
+ showFeedback(ok);
+}
+function showFeedback(ok){let c=state.current,f=$('#feedback');f.className=`feedback show ${ok?'good':'bad'}`;let title=ok?'Correct — fully simplified.':'Not quite. Here is a clean path to the answer.';let steps=(c.steps||[]).map((s,i)=>`<div class="step"><small>${i+1}.</small>${s}</div>`).join('');f.innerHTML=`<div class="feedback-title">${title}</div>${!ok?`<div style="margin-top:7px">Correct answer: <span style="font-family:Cambria Math,Georgia,serif;font-size:20px">${c.displayAnswer}</span></div>`:''}<div class="steps">${steps}</div><div class="rule-note"><b>${PROPS[c.prop]?.name||'Combined properties'}:</b> ${PROPS[c.prop]?.formula||''}</div>`}
+function updateStats(){['sideCorrect','miniCorrect'].forEach(id=>$('#'+id).textContent=state.correct);['sideAttempted','miniAttempted'].forEach(id=>$('#'+id).textContent=state.attempted);$('#sideStreak').textContent=state.streak;$('#accuracy').textContent=state.attempted?`${Math.round(100*state.correct/state.attempted)}% accuracy`:'— accuracy'}
+function setupProps(){let box=$('#propertyChecks');Object.entries(PROPS).forEach(([k,p])=>{let l=document.createElement('label');l.className='check';l.innerHTML=`<input type="checkbox" value="${k}" checked><span>${p.name}<div class="mini">${p.formula}</div></span>`;box.appendChild(l);l.querySelector('input').addEventListener('change',()=>{syncPropButtons();generate()})})}
+function syncPropButtons(){let checked=allowedProps();$('#allProps').classList.toggle('active',checked.length===Object.keys(PROPS).length);$('#coreProps').classList.toggle('active',checked.length===Object.values(PROPS).filter(p=>p.core).length && Object.keys(PROPS).filter(k=>PROPS[k].core).every(k=>checked.includes(k)))}
+setupProps();
+$$('#difficultySeg button').forEach(b=>b.onclick=()=>{$$('#difficultySeg button').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.difficulty=b.dataset.diff;generate()});
+$$('input[name=mode]').forEach(r=>r.onchange=()=>{state.mode=r.value;generate()});
+$('#allProps').onclick=()=>{$$('#propertyChecks input').forEach(x=>x.checked=true);syncPropButtons();generate()};
+$('#coreProps').onclick=()=>{$$('#propertyChecks input').forEach(x=>x.checked=PROPS[x.value].core);syncPropButtons();generate()};
+$('#lightBtn').onclick=()=>{document.body.classList.remove('dark');$('#lightBtn').classList.add('active');$('#darkBtn').classList.remove('active');localStorage.setItem('expTheme','light')};
+$('#darkBtn').onclick=()=>{document.body.classList.add('dark');$('#darkBtn').classList.add('active');$('#lightBtn').classList.remove('active');localStorage.setItem('expTheme','dark')};
+$('#resetStats').onclick=()=>{state.correct=state.attempted=state.streak=0;updateStats()};
+$('#newProblem').onclick=generate;
+if(localStorage.getItem('expTheme')==='dark')$('#darkBtn').click();
+updateStats();generate();
+})();
+</script>
+</body>
+</html>

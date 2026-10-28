@@ -75,6 +75,10 @@
   .property-name{font-family:Inter,sans-serif;font-size:16px}
   .kbd{display:inline-block;border:1px solid var(--line);background:var(--panel2);padding:1px 5px;border-radius:5px;font-size:12px}
   @media(max-width:800px){.app{display:block}aside{position:relative;height:auto;border-right:0;border-bottom:1px solid var(--line)}main{padding:26px 14px}.answers{grid-template-columns:1fr}.expression{font-size:38px}.problem-area{padding:28px 18px}}
+  math{font-family:"Cambria Math","STIX Two Math","Latin Modern Math",math;font-weight:normal;line-height:normal}
+  .expression{line-height:normal;min-height:130px;display:grid;place-items:center;padding:24px 4px;overflow-x:auto}
+  .expression>math{font-size:1em}.answer-btn math{font-size:1.12em;margin:auto}
+  .answer-btn{min-height:84px;padding:18px 12px}.rule-math math{font-size:1.15em}
 </style>
 </head>
 <body>
@@ -148,16 +152,32 @@ const PROPS = {
 const state={difficulty:'mixed',mode:'mc4',correct:0,attempted:0,streak:0,current:null,answered:false,build:[]};
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const ri=(a,b)=>Math.floor(Math.random()*(b-a+1))+a, pick=a=>a[Math.floor(Math.random()*a.length)], shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=ri(0,i);[a[i],a[j]]=[a[j],a[i]];}return a};
-const sup=n=>{let t=String(n).replace(/-/g,'−');const m=t.match(/^(−?\d+)\/(\d+)$/);return `<sup>${m?frac(m[1],m[2]):t}</sup>`;};
+const sup=n=>`<sup>${String(n).replace(/-/g,'−')}</sup>`;
 const pow=(b,e)=>String(e)==='1'?String(b):`<span class="power">${b}${sup(e)}</span>`;
 const frac=(n,d)=>`<span class="frac"><span class="num">${n}</span><span class="den">${d}</span></span>`;
 const root=(idx,rad)=>`<span class="root">${idx===2?'':`<span class="index">${idx}</span>`}<span class="radical">√</span><span class="radicand">${rad}</span></span>`;
 const textPow=(b,e)=>`${b}^${e}`;
 const gcd=(a,b)=>b?gcd(b,a%b):Math.abs(a);
+// Browser-native mathematical layout: no remote fonts, scripts, or CSS superscripts.
+function typeset(element){
+ if(!element||element.firstElementChild?.namespaceURI==='http://www.w3.org/1998/Math/MathML')return;
+ const source=element.innerHTML,ns='http://www.w3.org/1998/Math/MathML';
+ const m=(name,children=[])=>{const el=document.createElementNS(ns,name);for(const c of children)el.append(typeof c==='string'?document.createTextNode(c):c);return el;};
+ function convert(nodes){const row=m('mrow'),stack=[row];const current=()=>stack[stack.length-1];
+ function token(text){const parts=text.match(/\d+(?:\.\d+)?|[a-zA-Z]|\s+|./g)||[];for(const t of parts){if(/^\s+$/.test(t))continue;if(t==='('){const group=m('mrow',[m('mo',['('])]);current().append(group);stack.push(group);}else if(t===')'){current().append(m('mo',[')']));if(stack.length>1)stack.pop();}else current().append(m(/^\d/.test(t)?'mn':/^[a-z]$/i.test(t)?'mi':'mo',[t.replace('-','−')]));}}
+ for(const n of nodes){if(n.nodeType===3){token(n.textContent);continue;}if(n.nodeType!==1)continue;
+ if(n.tagName==='SUP'){let base=current().lastChild;if(base)base.remove();else base=m('mrow');const raw=n.textContent.trim(),f=raw.match(/^(−?-?\d+)\/(\d+)$/);const exponent=f?m('mfrac',[m('mn',[f[1]]),m('mn',[f[2]])]):convert(n.childNodes);current().append(m('msup',[base,exponent]));}
+ else if(n.classList.contains('frac'))current().append(m('mfrac',[convert(n.querySelector(':scope > .num').childNodes),convert(n.querySelector(':scope > .den').childNodes)]));
+ else if(n.classList.contains('root')){const rad=convert(n.querySelector(':scope > .radicand').childNodes),index=n.querySelector(':scope > .index');current().append(index?m('mroot',[rad,m('mn',[index.textContent])]):m('msqrt',[rad]));}
+ else current().append(convert(n.childNodes));
+ }return row;}
+ const math=m('math',[convert(element.childNodes)]);math.dataset.source=source;math.setAttribute('aria-label',mathText(source));element.replaceChildren(math);
+}
+function typesetPractice(){typeset($('#expression'));$$('.answer-btn:not(.property-name)').forEach(typeset);}
 function norm(s){return String(s).toLowerCase().replace(/\s+/g,'').replace(/[−–]/g,'-').replace(/·|×/g,'*').replace(/\*/g,'').replace(/\^\((-?\d+(?:\/\d+)?)\)/g,'^$1').replace(/\^1(?![\d/])/g,'');}
 // Convert the rendered expression to explicit grouping before symbolic comparison.
 function mathText(html){
- const box=document.createElement('div');box.innerHTML=html;
+ const box=document.createElement('div');box.innerHTML=html;if(box.firstElementChild?.tagName.toLowerCase()==='math'&&box.firstElementChild.dataset.source)return mathText(box.firstElementChild.dataset.source);
  function read(n){if(n.nodeType===3)return n.textContent;if(n.nodeType!==1)return '';const children=()=>[...n.childNodes].map(read).join('');if(n.classList.contains('frac'))return `((${read(n.querySelector(':scope > .num'))})/(${read(n.querySelector(':scope > .den'))}))`;if(n.tagName==='SUP')return `^(${children()})`;if(n.classList.contains('root')){const index=n.querySelector(':scope > .index');return `root${index?index.textContent:2}(${read(n.querySelector(':scope > .radicand'))})`;}return children();}
  return read(box).replace(/[−–]/g,'-').replace(/[·×]/g,'*').replace(/\s+/g,'');
 }
@@ -257,7 +277,7 @@ function render(){
  $('#expression').innerHTML=c.display; $('#prompt').textContent= mode==='identify'?'Which exponent property justifies this step?':c.prompt;
  $('#diffBadge').textContent=state.difficulty[0].toUpperCase()+state.difficulty.slice(1); $('#responseArea').innerHTML='';
  if(mode==='identify') renderIdentify(); else if(mode==='mc4'||mode==='mc6') renderMC(mode==='mc4'?4:6); else if(mode==='build') renderBuild(); else renderType();
- updateTitles();
+ updateTitles();typesetPractice();
 }
 function updateTitles(){let map={mc4:['Simplify the expression','Choose the fully simplified result.'],mc6:['Simplify the expression','Choose the fully simplified result.'],build:['Build the simplified form','Construct the answer from expression pieces.'],type:['Type the simplified form','Enter a fully simplified result.'],identify:['Identify the property','Name the exponent rule used in the transformation.']};$('#modeTitle').textContent=map[state.mode][0];$('#modeSub').textContent=map[state.mode][1]}
 function renderMC(count){
@@ -268,7 +288,7 @@ function renderMC(count){
  const variable=(mathText(c.displayAnswer).match(/[a-z]/)||['x'])[0];
  for(let n=0;opts.length<count&&n<100;n++)add(n%2?`${n+2}${pow(variable,n%7+1)}`:String(n+2));
  const box=document.createElement('div');box.className='answers';
- shuffle(opts).forEach(o=>{const b=document.createElement('button');b.className='answer-btn';b.innerHTML=o.html;b.dataset.correct=String(o.correct);b.onclick=()=>answer(o.correct,b);box.appendChild(b);});$('#responseArea').appendChild(box);
+ shuffle(opts).forEach(o=>{const b=document.createElement('button');b.className='answer-btn';b.innerHTML=o.html;b.dataset.correct=String(o.correct);b.onclick=()=>answer(o.correct,b);box.appendChild(b);});$('#responseArea').appendChild(box);box.querySelectorAll('button').forEach(typeset);
 }
 function renderIdentify(){
  let c=state.current; let left=c.display, right=c.displayAnswer; $('#expression').innerHTML=`${left}<span style="font-family:Inter;font-size:.55em;color:var(--muted);margin:0 .35em">→</span>${right}`;
@@ -287,14 +307,14 @@ function renderType(){let c=state.current;let div=document.createElement('div');
 function checkText(val){if(state.answered)return;let ok=state.current.accept.includes(norm(val));answer(ok,null)}
 function answer(ok,button){if(state.answered)return;state.answered=true;state.attempted++;if(ok){state.correct++;state.streak++}else state.streak=0;updateStats();
  if(button){button.classList.add(ok?'correct':'wrong');$$('.answer-btn').forEach(b=>{b.disabled=true;if(b.dataset.correct==='true')b.classList.add('correct');});}
- showFeedback(ok);
+ showFeedback(ok);$$('.rule-math').forEach(typeset);const correct=$('#feedback .feedback-answer');if(correct)typeset(correct);
 }
-function showFeedback(ok){let c=state.current,f=$('#feedback');f.className=`feedback show ${ok?'good':'bad'}`;let title=ok?'Correct — fully simplified.':'Not quite. Here is a clean path to the answer.';let steps=(c.steps||[]).map((s,i)=>`<div class="step"><small>${i+1}.</small>${s}</div>`).join('');f.innerHTML=`<div class="feedback-title">${title}</div>${!ok?`<div style="margin-top:7px">Correct answer: <span style="font-family:Cambria Math,Georgia,serif;font-size:20px">${c.displayAnswer}</span></div>`:''}<div class="steps">${steps}</div><div class="rule-note"><b>${PROPS[c.prop]?.name||'Combined properties'}:</b> ${formulaHTML(PROPS[c.prop]?.formula||'')}</div>`}
+function showFeedback(ok){let c=state.current,f=$('#feedback');f.className=`feedback show ${ok?'good':'bad'}`;let title=ok?'Correct — fully simplified.':'Not quite. Here is a clean path to the answer.';let steps=(c.steps||[]).map((s,i)=>`<div class="step"><small>${i+1}.</small>${s}</div>`).join('');f.innerHTML=`<div class="feedback-title">${title}</div>${!ok?`<div style="margin-top:7px">Correct answer: <span class="feedback-answer" style="font-family:Cambria Math,Georgia,serif;font-size:20px">${c.displayAnswer}</span></div>`:''}<div class="steps">${steps}</div><div class="rule-note"><b>${PROPS[c.prop]?.name||'Combined properties'}:</b> <span class="rule-math">${formulaHTML(PROPS[c.prop]?.formula||'')}</span></div>`}
 function updateStats(){['sideCorrect','miniCorrect'].forEach(id=>$('#'+id).textContent=state.correct);['sideAttempted','miniAttempted'].forEach(id=>$('#'+id).textContent=state.attempted);$('#sideStreak').textContent=state.streak;$('#accuracy').textContent=state.attempted?`${Math.round(100*state.correct/state.attempted)}% accuracy`:'— accuracy'}
 function formulaHTML(text){return text.replace(/\^\(([^)]+)\)/g,(_,e)=>sup(e)).replace(/\^([a-z0-9]+)/g,(_,e)=>sup(e));}
 function setupProps(){let box=$('#propertyChecks');Object.entries(PROPS).forEach(([k,p])=>{let l=document.createElement('label');l.className='check';l.innerHTML=`<input type="checkbox" value="${k}" checked><span>${p.name}<div class="mini">${formulaHTML(p.formula)}</div></span>`;box.appendChild(l);l.querySelector('input').addEventListener('change',()=>{syncPropButtons();generate()})})}
 function syncPropButtons(){let checked=allowedProps();$('#allProps').classList.toggle('active',checked.length===Object.keys(PROPS).length);$('#coreProps').classList.toggle('active',checked.length===Object.values(PROPS).filter(p=>p.core).length && Object.keys(PROPS).filter(k=>PROPS[k].core).every(k=>checked.includes(k)))}
-setupProps();
+setupProps();$$('#propertyChecks .mini').forEach(typeset);
 $$('#difficultySeg button').forEach(b=>b.onclick=()=>{$$('#difficultySeg button').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.difficulty=b.dataset.diff;generate()});
 $$('input[name=mode]').forEach(r=>r.onchange=()=>{state.mode=r.value;generate()});
 $('#allProps').onclick=()=>{$$('#propertyChecks input').forEach(x=>x.checked=true);syncPropButtons();generate()};

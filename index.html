@@ -49,8 +49,9 @@
   .difficulty-badge{font-size:12px;font-weight:800;border:1px solid var(--line);padding:6px 9px;border-radius:999px}
   .problem-area{padding:clamp(28px,5vw,54px)}
   .prompt{font-size:15px;color:var(--muted);text-align:center;margin-bottom:18px}
-  .expression{font-family:"Cambria Math","STIX Two Math",Georgia,serif;font-size:clamp(34px,6vw,62px);font-weight:600;text-align:center;line-height:1.28;min-height:90px;display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:.12em}
-  sup{font-size:.62em;vertical-align:.55em;line-height:0}
+  .expression{font-family:"Cambria Math","STIX Two Math",Georgia,serif;font-size:clamp(34px,6vw,62px);font-weight:600;text-align:center;line-height:1.28;min-height:90px;display:block;overflow-wrap:normal;padding:12px 0}
+  sup{font-size:.62em;vertical-align:baseline;position:relative;top:-.58em;line-height:0;margin-left:.03em}
+  .power{display:inline-block;white-space:nowrap}.expression sup .frac{font-size:.85em}.answer-btn sup .frac{font-size:.9em}.expression .frac{vertical-align:middle}.math-domain{margin-top:12px;text-align:center;color:var(--muted);font-size:12px}.expression{line-height:1.8}.answer-btn{line-height:1.9}.step{line-height:1.8}
   .frac{display:inline-grid;grid-template-rows:auto auto;vertical-align:middle;text-align:center;line-height:1.05;margin:0 .12em}.frac .num{border-bottom:2px solid currentColor;padding:0 .18em .10em}.frac .den{padding:.10em .18em 0}
   .root{display:inline-flex;align-items:flex-start}.root .index{font-size:.42em;transform:translate(.18em,.0em)}.root .radical{font-size:1.12em;line-height:1}.root .radicand{border-top:2px solid currentColor;padding:.02em .12em 0 .06em;margin-top:.10em}
   .answers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:30px}
@@ -121,6 +122,7 @@
     <div class="problem-area">
       <div class="prompt" id="prompt">Simplify completely. Use positive exponents in your final answer.</div>
       <div class="expression" id="expression"></div>
+      <div class="math-domain">Assume all variables are positive. Give fully simplified answers.</div>
       <div id="responseArea"></div>
       <div class="feedback" id="feedback"><div class="feedback-title" id="feedbackTitle"></div><div id="feedbackBody"></div></div>
       <div class="footer-actions"><button class="new-btn" id="newProblem">New problem</button></div>
@@ -145,14 +147,32 @@ const PROPS = {
 };
 const state={difficulty:'mixed',mode:'mc4',correct:0,attempted:0,streak:0,current:null,answered:false,build:[]};
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-const ri=(a,b)=>Math.floor(Math.random()*(b-a+1))+a, pick=a=>a[Math.floor(Math.random()*a.length)], shuffle=a=>[...a].sort(()=>Math.random()-.5);
-const sup=n=>`<sup>${String(n).replace('-','−')}</sup>`;
-const pow=(b,e)=>`${b}${sup(e)}`;
+const ri=(a,b)=>Math.floor(Math.random()*(b-a+1))+a, pick=a=>a[Math.floor(Math.random()*a.length)], shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=ri(0,i);[a[i],a[j]]=[a[j],a[i]];}return a};
+const sup=n=>{let t=String(n).replace(/-/g,'−');const m=t.match(/^(−?\d+)\/(\d+)$/);return `<sup>${m?frac(m[1],m[2]):t}</sup>`;};
+const pow=(b,e)=>String(e)==='1'?String(b):`<span class="power">${b}${sup(e)}</span>`;
 const frac=(n,d)=>`<span class="frac"><span class="num">${n}</span><span class="den">${d}</span></span>`;
 const root=(idx,rad)=>`<span class="root">${idx===2?'':`<span class="index">${idx}</span>`}<span class="radical">√</span><span class="radicand">${rad}</span></span>`;
 const textPow=(b,e)=>`${b}^${e}`;
 const gcd=(a,b)=>b?gcd(b,a%b):Math.abs(a);
-function norm(s){return String(s).toLowerCase().replace(/\s+/g,'').replace(/[−–]/g,'-').replace(/·|×/g,'*').replace(/\*/g,'').replace(/[()]/g,'').replace(/\*1(?=$|\/)/g,'').replace(/\^1(?!\d)/g,'').replace(/sqrt\[(\d+)\]\{([^}]+)\}/g,'sqrt$1($2)');}
+function norm(s){return String(s).toLowerCase().replace(/\s+/g,'').replace(/[−–]/g,'-').replace(/·|×/g,'*').replace(/\*/g,'').replace(/\^\((-?\d+(?:\/\d+)?)\)/g,'^$1').replace(/\^1(?![\d/])/g,'');}
+// Convert the rendered expression to explicit grouping before symbolic comparison.
+function mathText(html){
+ const box=document.createElement('div');box.innerHTML=html;
+ function read(n){if(n.nodeType===3)return n.textContent;if(n.nodeType!==1)return '';const children=()=>[...n.childNodes].map(read).join('');if(n.classList.contains('frac'))return `((${read(n.querySelector(':scope > .num'))})/(${read(n.querySelector(':scope > .den'))}))`;if(n.tagName==='SUP')return `^(${children()})`;if(n.classList.contains('root')){const index=n.querySelector(':scope > .index');return `root${index?index.textContent:2}(${read(n.querySelector(':scope > .radicand'))})`;}return children();}
+ return read(box).replace(/[−–]/g,'-').replace(/[·×]/g,'*').replace(/\s+/g,'');
+}
+// A monomial is a map of prime-number and variable factors to rational powers.
+// This distinguishes x² from x³ but recognizes 2³ = 8 and x^(2/4) = √x.
+function mathKey(html){
+ const text=mathText(html);let i=0;
+ const combine=(a,b,sign=1)=>{const out={...a};for(const k in b)out[k]=(out[k]||0)+sign*b[k];return out;};
+ const power=(a,e)=>Object.fromEntries(Object.entries(a).map(([k,v])=>[k,v*e]));
+ function number(n){if(n===0)return {'#zero':1};const out={};if(n<0){out['#sign']=1;n=-n;}for(let d=2;d*d<=n;d++){while(n%d===0){out['#'+d]=(out['#'+d]||0)+1;n/=d;}}if(n>1)out['#'+n]=(out['#'+n]||0)+1;return out;}
+ function atom(){if(text[i]==='('){i++;const a=product();if(text[i++]!==')')throw Error('Missing parenthesis');return a;}if(text.startsWith('root',i)){i+=4;const m=text.slice(i).match(/^\d+/);if(!m||+m[0]<1)throw Error('Invalid root');i+=m[0].length;return power(atom(),1/+m[0]);}if(text[i]==='-'){i++;return combine(number(-1),atom());}const m=text.slice(i).match(/^\d+/);if(m){i+=m[0].length;return number(+m[0]);}if(/[a-z]/.test(text[i]||''))return {[text[i++]]:1};throw Error('Invalid expression');}
+ function factor(){let a=atom();if(text[i]==='^'){i++;let e;if(text[i]==='('){let start=++i,depth=1;while(i<text.length&&depth){if(text[i]==='(')depth++;if(text[i]===')')depth--;if(depth)i++;}const t=text.slice(start,i++).replace(/[()]/g,'');if(!/^-?\d+(?:\/-?\d+)?$/.test(t))throw Error('Invalid exponent');const [n,d=1]=t.split('/').map(Number);e=n/d;}else{const m=text.slice(i).match(/^-?\d+/);if(!m)throw Error('Invalid exponent');i+=m[0].length;e=+m[0];}if(!Number.isFinite(e))throw Error('Invalid exponent');a=power(a,e);}return a;}
+ function product(){let a=factor();while(i<text.length&&text[i]!==')'){let sign=1;if(text[i]==='/'){sign=-1;i++;}else if(text[i]==='*')i++;a=combine(a,factor(),sign);}return a;}
+ try{const a=product();if(i!==text.length)throw Error('Unexpected text');if(a['#zero'])return '0';return Object.keys(a).sort().filter(k=>Math.abs(a[k])>1e-10).map(k=>k+':'+Number(a[k].toFixed(10))).join('|')||'1';}catch{return null;}
+}
 function htmlFromText(s){
   if(s.includes('ROOT:')){ const [,idx,rad]=s.match(/ROOT:(\d+):(.+)/); return root(+idx, rad.replace(/\^([\-\d/]+)/g,(_,e)=>sup(e))); }
   let t=s.replace(/\^\(([^)]+)\)/g,(_,e)=>sup(e)).replace(/\^(-?\d+(?:\/\d+)?)/g,(_,e)=>sup(e));
@@ -163,7 +183,7 @@ function canonicalVariants(ans){
   if(ans.includes('*')) out.push(norm(ans.replace(/\*/g,'')));
   return [...new Set(out)];
 }
-function q(obj){obj.accept=obj.accept||canonicalVariants(obj.answer);obj.propertyName=PROPS[obj.prop]?.name||'';return obj;}
+function q(obj){obj.accept=obj.accept||canonicalVariants(obj.answer);if(obj.prop==='rational'){const m=obj.answer.match(/^root2\((.+)\)$/);if(m)obj.accept.push(norm(`sqrt(${m[1]})`));}obj.propertyName=PROPS[obj.prop]?.name||'';return obj;}
 
 function genSingle(prop,diff){
   const v=pick(['x','y','a','b']);
@@ -187,10 +207,12 @@ function genSingle(prop,diff){
     let n=ri(2,4),a=ri(2,5);return q({prop,prompt:'Simplify completely.',display:`(${a}${v}${w})${sup(n)}`,answer:`${a**n}${v}^${n}${w}^${n}`,displayAnswer:`${a**n}${pow(v,n)}${pow(w,n)}`,steps:[`Apply the exponent to every factor.`,`${a}<sup>${n}</sup>${pow(v,n)}${pow(w,n)} = ${a**n}${pow(v,n)}${pow(w,n)}`],wrong:[`${a*n}${pow(v,n)}${pow(w,n)}`,`${a**n}${pow(v,n)}${w}`,`${a}${pow(v,n)}${pow(w,n)}`]});
   }
   if(prop==='quotientPower'){
-    let n=ri(2,4),a=pick([2,3]),b=pick([4,5]);return q({prop,prompt:'Simplify completely.',display:`(${frac(`${a}${v}`,`${b}${w}`)})${sup(n)}`,answer:`${a**n}${v}^${n}/${b**n}${w}^${n}`,displayAnswer:frac(`${a**n}${pow(v,n)}`,`${b**n}${pow(w,n)}`),steps:[`Raise the numerator and denominator to the ${n} power.`,`${frac(`${a}<sup>${n}</sup>${pow(v,n)}`,`${b}<sup>${n}</sup>${pow(w,n)}`)} = ${frac(`${a**n}${pow(v,n)}`,`${b**n}${pow(w,n)}`)}`],wrong:[frac(`${a*n}${pow(v,n)}`,`${b*n}${pow(w,n)}`),frac(`${a**n}${pow(v,n)}`,`${b}${pow(w,n)}`),frac(`${a**n}${v}`,`${b**n}${w}`)]});
+    let n=ri(2,4),a=pick([2,3]),b=pick([4,5]),g=gcd(a,b),an=(a/g)**n,bn=(b/g)**n;return q({prop,prompt:'Simplify completely.',display:`(${frac(`${a}${v}`,`${b}${w}`)})${sup(n)}`,answer:`${an===1?'':an}${v}^${n}/(${bn}${w}^${n})`,displayAnswer:frac(`${an===1?'':an}${pow(v,n)}`,`${bn}${pow(w,n)}`),steps:[`Raise the numerator and denominator to the ${n} power.`,`${frac(`${a}<sup>${n}</sup>${pow(v,n)}`,`${b}<sup>${n}</sup>${pow(w,n)}`)} = ${frac(`${an===1?'':an}${pow(v,n)}`,`${bn}${pow(w,n)}`)}`,`Reduce the numerical fraction by any common factor.`],wrong:[frac(`${a*n}${pow(v,n)}`,`${b*n}${pow(w,n)}`),frac(`${a**n}${pow(v,n)}`,`${b}${pow(w,n)}`),frac(`${a**n}${v}`,`${b**n}${w}`)]});
   }
   if(prop==='zero'){
-    let inside=pick([v,`${ri(2,8)}${v}`,`(${v}${w})`,`(${ri(2,5)}${v}/${ri(2,5)})`]);return q({prop,prompt:'Simplify completely.',display:`${inside}${sup(0)}`,answer:'1',displayAnswer:'1',steps:[`Any nonzero base raised to the zero power equals 1.`],wrong:['0',inside,`−1`]});
+    const c=ri(2,8),whole=Math.random()<.5;
+    if(whole){const inside=pick([v,`(${c}${v})`,`(${v}${w})`,`(${c}${v}/${ri(2,5)})`]);return q({prop,prompt:'Simplify completely.',display:`${inside}${sup(0)}`,answer:'1',displayAnswer:'1',steps:[`The entire nonzero base is raised to zero, so its value is 1.`],wrong:['0',inside,'−1',String(c)]});}
+    return q({prop,prompt:'Simplify completely.',display:`${c}${pow(v,0)}`,answer:String(c),displayAnswer:String(c),steps:[`Only ${v} is raised to zero: ${pow(v,0)} = 1.`,`The coefficient stays outside: ${c} · 1 = ${c}.`],wrong:['1','0',`${c}${v}`,'−1']});
   }
   if(prop==='negative'){
     let n=ri(2,6),coef=Math.random()<.35?ri(2,5):1;if(coef===1){return q({prop,prompt:'Rewrite using positive exponents.',display:pow(v,-n),answer:`1/${v}^${n}`,displayAnswer:frac('1',pow(v,n)),steps:[`${pow(v,-n)} = ${frac('1',pow(v,n))}`],wrong:[pow(v,n),`−${pow(v,n)}`,frac('1',pow(v,n+1))]});}
@@ -208,7 +230,7 @@ function genSingle(prop,diff){
 function genAdvanced(){
  const v=pick(['x','y','a']),w=pick(['m','n','b']),type=ri(1,5);
  if(type===1){let p=ri(2,4),qv=ri(2,4),r=ri(1,3),c=pick([2,3]);let e=p*qv-r;let c2=c**qv;return q({prop:'power',prompt:'Simplify completely. Use positive exponents.',display:frac(`(${c}${pow(v,p)})${sup(qv)}`,pow(v,r)),answer:`${c2}${v}^${e}`,displayAnswer:`${c2}${pow(v,e)}`,steps:[`Power of a product: (${c}${pow(v,p)})${sup(qv)} = ${c2}${pow(v,p*qv)}`,`Quotient rule: ${pow(v,p*qv)} / ${pow(v,r)} = ${pow(v,e)}`,`Final: ${c2}${pow(v,e)}`],wrong:[`${c*qv}${pow(v,e)}`,`${c2}${pow(v,p*qv+r)}`,`${c2}${pow(v,p*qv)} `]});}
- if(type===2){let a=ri(2,5),b=ri(1,3),c=ri(4,7),d=ri(1,3);let ex=a-c,ey=b+d;let ans=ex>=0?`${v}^${ex}${w}^${ey}`:`${w}^${ey}/${v}^${-ex}`;let disp=ex>=0?`${pow(v,ex)}${pow(w,ey)}`:frac(pow(w,ey),pow(v,-ex));return q({prop:'quotient',prompt:'Simplify completely. Use positive exponents.',display:frac(`${pow(v,a)}${pow(w,b)}`,`${pow(v,c)}${pow(w,-d)}`),answer:ans,displayAnswer:disp,steps:[`${v}: ${a} − ${c} = ${ex}`,`${w}: ${b} − (−${d}) = ${ey}`,ex<0?`Move ${pow(v,ex)} to the denominator: ${disp}`:`Final: ${disp}`],wrong:[`${pow(v,a+c)}${pow(w,b+d)}`,frac(pow(v,-ex),pow(w,ey)),`${pow(v,Math.abs(ex))}${pow(w,b-d)}`]});}
+ if(type===2){let a=ri(2,5),b=ri(1,3),c=ri(4,7),d=ri(1,3);let ex=a-c,ey=b+d;let ans=ex>=0?`${ex===0?'':`${v}^${ex}`}${w}^${ey}`:`${w}^${ey}/${v}^${-ex}`;let disp=ex>=0?`${ex===0?'':pow(v,ex)}${pow(w,ey)}`:frac(pow(w,ey),pow(v,-ex));return q({prop:'quotient',prompt:'Simplify completely. Use positive exponents.',display:frac(`${pow(v,a)}${pow(w,b)}`,`${pow(v,c)}${pow(w,-d)}`),answer:ans,displayAnswer:disp,steps:[`${v}: ${a} − ${c} = ${ex}`,`${w}: ${b} − (−${d}) = ${ey}`,ex<0?`Move ${pow(v,ex)} to the denominator: ${disp}`:`Final: ${disp}`],wrong:[`${pow(v,a+c)}${pow(w,b+d)}`,frac(pow(v,-ex),pow(w,ey)),`${pow(v,Math.abs(ex))}${pow(w,b-d)}`]});}
  if(type===3){let p=ri(2,4),n=pick([2,3]),m=ri(1,n-1);let total=p*m;let g=gcd(total,n),nn=total/g,dd=n/g;return q({prop:'rational',prompt:'Simplify the exponent.',display:`(${pow(v,p)})${sup(`${m}/${n}`)}`,answer:`${v}^${dd===1?nn:`${nn}/${dd}`}`,displayAnswer:pow(v,dd===1?nn:`${nn}/${dd}`),steps:[`Power of a power: multiply ${p} · ${m}/${n} = ${total}/${n}.`,g>1?`Reduce ${total}/${n} to ${dd===1?nn:`${nn}/${dd}`}.`:'The exponent is already reduced.'],wrong:[pow(v,`${p+m}/${n}`),pow(v,`${p}/${m*n}`),pow(v,`${p*n}/${m}`)]});}
  if(type===4){let p=ri(2,4),qv=ri(1,3);return q({prop:'negative',prompt:'Simplify completely. Use positive exponents.',display:`(${frac(pow(v,-p),pow(w,-qv))})`,answer:`${w}^${qv}/${v}^${p}`,displayAnswer:frac(pow(w,qv),pow(v,p)),steps:[`${pow(v,-p)} = ${frac('1',pow(v,p))} and ${frac('1',pow(w,-qv))} = ${pow(w,qv)}.`,`Final: ${frac(pow(w,qv),pow(v,p))}`],wrong:[frac(pow(v,p),pow(w,qv)),frac('1',`${pow(v,p)}${pow(w,qv)}`),`${pow(v,p)}${pow(w,qv)}`]});}
  let n=pick([2,3]),p=ri(2,4),c=pick([2,3]);return q({prop:'productPower',prompt:'Simplify completely.',display:`(${c}${pow(v,p)}${w})${sup(n)}`,answer:`${c**n}${v}^${p*n}${w}^${n}`,displayAnswer:`${c**n}${pow(v,p*n)}${pow(w,n)}`,steps:[`Apply the outer exponent to each factor.`,`Coefficient: ${c}<sup>${n}</sup> = ${c**n}`,`${v}: ${p} · ${n} = ${p*n}`,`Final: ${c**n}${pow(v,p*n)}${pow(w,n)}`],wrong:[`${c*n}${pow(v,p*n)}${pow(w,n)}`,`${c**n}${pow(v,p+n)}${pow(w,n)}`,`${c**n}${pow(v,p*n)}${w}`]});
@@ -227,6 +249,7 @@ function generate(){
   else if(state.difficulty==='advanced' && !['rational','radical','zero'].includes(p) && Math.random()<.72) problem=genAdvanced();
   else if(state.difficulty==='mixed' && Math.random()<.35) problem=genAdvanced();
   else problem=genSingle(p,state.difficulty);
+  if(!props.includes(problem.prop)){problem=genSingle(p,state.difficulty);}
   state.current=problem; render();
 }
 function render(){
@@ -237,40 +260,51 @@ function render(){
  updateTitles();
 }
 function updateTitles(){let map={mc4:['Simplify the expression','Choose the fully simplified result.'],mc6:['Simplify the expression','Choose the fully simplified result.'],build:['Build the simplified form','Construct the answer from expression pieces.'],type:['Type the simplified form','Enter a fully simplified result.'],identify:['Identify the property','Name the exponent rule used in the transformation.']};$('#modeTitle').textContent=map[state.mode][0];$('#modeSub').textContent=map[state.mode][1]}
-function renderMC(count){let c=state.current,opts=[{html:c.displayAnswer,key:'correct'}];let wrong=[...(c.wrong||[])];const fallback=['1','0','x',pow('x',2),frac('1',pow('x',2)),pow('x','1/2')];while(wrong.length<count-1)wrong.push(pick(fallback));wrong=wrong.slice(0,count-1);opts.push(...wrong.map((h,i)=>({html:h,key:'w'+i})));opts=shuffle(opts);let box=document.createElement('div');box.className='answers';opts.forEach(o=>{let b=document.createElement('button');b.className='answer-btn';b.innerHTML=o.html;b.onclick=()=>answer(o.key==='correct',b);box.appendChild(b)});$('#responseArea').appendChild(box)}
+function renderMC(count){
+ const c=state.current,correctKey=mathKey(c.displayAnswer);if(correctKey===null)throw Error('Cannot parse correct answer');
+ const opts=[{html:c.displayAnswer,correct:true}],seen=new Set([correctKey]);
+ function add(html){const key=mathKey(html);if(key===null||seen.has(key))return;seen.add(key);opts.push({html,correct:false});}
+ for(const html of shuffle(c.wrong||[])){if(opts.length===count)break;add(html);}
+ const variable=(mathText(c.displayAnswer).match(/[a-z]/)||['x'])[0];
+ for(let n=0;opts.length<count&&n<100;n++)add(n%2?`${n+2}${pow(variable,n%7+1)}`:String(n+2));
+ const box=document.createElement('div');box.className='answers';
+ shuffle(opts).forEach(o=>{const b=document.createElement('button');b.className='answer-btn';b.innerHTML=o.html;b.dataset.correct=String(o.correct);b.onclick=()=>answer(o.correct,b);box.appendChild(b);});$('#responseArea').appendChild(box);
+}
 function renderIdentify(){
  let c=state.current; let left=c.display, right=c.displayAnswer; $('#expression').innerHTML=`${left}<span style="font-family:Inter;font-size:.55em;color:var(--muted);margin:0 .35em">→</span>${right}`;
- let names=shuffle([c.prop,...shuffle(Object.keys(PROPS).filter(k=>k!==c.prop)).slice(0,3)]);let box=document.createElement('div');box.className='answers';names.forEach(k=>{let b=document.createElement('button');b.className='answer-btn property-name';b.textContent=PROPS[k].name;b.onclick=()=>answer(k===c.prop,b);box.appendChild(b)});$('#responseArea').appendChild(box)
+ let names=shuffle([c.prop,...shuffle(Object.keys(PROPS).filter(k=>k!==c.prop)).slice(0,3)]);let box=document.createElement('div');box.className='answers';names.forEach(k=>{let b=document.createElement('button');b.className='answer-btn property-name';b.textContent=PROPS[k].name;b.dataset.correct=String(k===c.prop);b.onclick=()=>answer(k===c.prop,b);box.appendChild(b)});$('#responseArea').appendChild(box)
 }
 function makeBuildTokens(answer){
  let a=answer;
  if(/^\d+$/.test(a)) return shuffle([a,String(+a+1),String(Math.max(1,+a-1)),'1']);
  if(a.startsWith('root')){let m=a.match(/root(\d+)\((.+)\)/);return shuffle([`root${m[1]}(`,m[2],')',`root${+m[1]+1}(`,'x', '^2']);}
- let tokens=[]; let parts=a.match(/[a-z]+\^-?\d+(?:\/\d+)?|\d+|[a-z]+|\/|\*|\^|-?\d+\/\d+/g);if(parts)tokens=parts;
- const extras=['1','2','x','y','/','^2','^3'];return shuffle([...tokens,...shuffle(extras).slice(0,3)]);
+ let tokens=[]; let parts=a.match(/[a-z]+\^-?\d+(?:\/\d+)?|\d+|[a-z]+|[()/]|\*|\^|-?\d+\/\d+/g);if(parts)tokens=parts;
+ const extras=['1','2','x','y','/','(',')','^2','^3'];return shuffle([...tokens,...shuffle(extras).slice(0,3)]);
 }
 function renderBuild(){let c=state.current;let wrap=document.createElement('div');wrap.className='builder';wrap.innerHTML='<div class="build-zone empty" id="buildZone"></div><div class="piece-bank" id="pieceBank"></div><div class="hint">Click a placed piece to remove it. Build from left to right.</div><div class="actions"><button class="secondary" id="clearBuild">Clear</button><button class="primary" id="checkBuild">Check answer</button></div>';$('#responseArea').appendChild(wrap);makeBuildTokens(c.answer).forEach(t=>{let b=document.createElement('button');b.className='piece';b.textContent=t;b.onclick=()=>{state.build.push(t);renderBuildZone()};$('#pieceBank').appendChild(b)});$('#clearBuild').onclick=()=>{state.build=[];renderBuildZone()};$('#checkBuild').onclick=()=>checkText(state.build.join(''));}
 function renderBuildZone(){let z=$('#buildZone');z.innerHTML='';z.classList.toggle('empty',!state.build.length);state.build.forEach((t,i)=>{let b=document.createElement('button');b.className='piece placed';b.textContent=t;b.onclick=()=>{state.build.splice(i,1);renderBuildZone()};z.appendChild(b)})}
-function renderType(){let c=state.current;let div=document.createElement('div');div.className='type-wrap';div.innerHTML=`<input class="type-input" id="typeInput" autocomplete="off" placeholder="Type your answer"><div class="hint">Use ^ for exponents, / for fractions, and root3(x^2) for ∛(x²). Parentheses are optional around fractional exponents.</div><div class="actions"><button class="primary" id="checkType">Check answer</button></div>`;$('#responseArea').appendChild(div);$('#checkType').onclick=()=>checkText($('#typeInput').value);$('#typeInput').addEventListener('keydown',e=>{if(e.key==='Enter')checkText(e.target.value)});setTimeout(()=>$('#typeInput').focus(),0)}
+function renderType(){let c=state.current;let div=document.createElement('div');div.className='type-wrap';div.innerHTML=`<input class="type-input" id="typeInput" autocomplete="off" placeholder="Type your answer"><div class="hint">Use ^ for exponents, / for fractions, and root3(x^2) for ∛(x²). Use parentheses around a multi-factor denominator, such as x^2/(4y^2).</div><div class="actions"><button class="primary" id="checkType">Check answer</button></div>`;$('#responseArea').appendChild(div);$('#checkType').onclick=()=>checkText($('#typeInput').value);$('#typeInput').addEventListener('keydown',e=>{if(e.key==='Enter')checkText(e.target.value)});setTimeout(()=>$('#typeInput')?.focus(),0)}
 function checkText(val){if(state.answered)return;let ok=state.current.accept.includes(norm(val));answer(ok,null)}
 function answer(ok,button){if(state.answered)return;state.answered=true;state.attempted++;if(ok){state.correct++;state.streak++}else state.streak=0;updateStats();
- if(button){button.classList.add(ok?'correct':'wrong');$$('.answer-btn').forEach(b=>b.disabled=true);if(!ok){$$('.answer-btn').forEach(b=>{if(norm(b.innerText)===norm(state.current.displayAnswer.replace(/<[^>]+>/g,''))){} });}}
+ if(button){button.classList.add(ok?'correct':'wrong');$$('.answer-btn').forEach(b=>{b.disabled=true;if(b.dataset.correct==='true')b.classList.add('correct');});}
  showFeedback(ok);
 }
-function showFeedback(ok){let c=state.current,f=$('#feedback');f.className=`feedback show ${ok?'good':'bad'}`;let title=ok?'Correct — fully simplified.':'Not quite. Here is a clean path to the answer.';let steps=(c.steps||[]).map((s,i)=>`<div class="step"><small>${i+1}.</small>${s}</div>`).join('');f.innerHTML=`<div class="feedback-title">${title}</div>${!ok?`<div style="margin-top:7px">Correct answer: <span style="font-family:Cambria Math,Georgia,serif;font-size:20px">${c.displayAnswer}</span></div>`:''}<div class="steps">${steps}</div><div class="rule-note"><b>${PROPS[c.prop]?.name||'Combined properties'}:</b> ${PROPS[c.prop]?.formula||''}</div>`}
+function showFeedback(ok){let c=state.current,f=$('#feedback');f.className=`feedback show ${ok?'good':'bad'}`;let title=ok?'Correct — fully simplified.':'Not quite. Here is a clean path to the answer.';let steps=(c.steps||[]).map((s,i)=>`<div class="step"><small>${i+1}.</small>${s}</div>`).join('');f.innerHTML=`<div class="feedback-title">${title}</div>${!ok?`<div style="margin-top:7px">Correct answer: <span style="font-family:Cambria Math,Georgia,serif;font-size:20px">${c.displayAnswer}</span></div>`:''}<div class="steps">${steps}</div><div class="rule-note"><b>${PROPS[c.prop]?.name||'Combined properties'}:</b> ${formulaHTML(PROPS[c.prop]?.formula||'')}</div>`}
 function updateStats(){['sideCorrect','miniCorrect'].forEach(id=>$('#'+id).textContent=state.correct);['sideAttempted','miniAttempted'].forEach(id=>$('#'+id).textContent=state.attempted);$('#sideStreak').textContent=state.streak;$('#accuracy').textContent=state.attempted?`${Math.round(100*state.correct/state.attempted)}% accuracy`:'— accuracy'}
-function setupProps(){let box=$('#propertyChecks');Object.entries(PROPS).forEach(([k,p])=>{let l=document.createElement('label');l.className='check';l.innerHTML=`<input type="checkbox" value="${k}" checked><span>${p.name}<div class="mini">${p.formula}</div></span>`;box.appendChild(l);l.querySelector('input').addEventListener('change',()=>{syncPropButtons();generate()})})}
+function formulaHTML(text){return text.replace(/\^\(([^)]+)\)/g,(_,e)=>sup(e)).replace(/\^([a-z0-9]+)/g,(_,e)=>sup(e));}
+function setupProps(){let box=$('#propertyChecks');Object.entries(PROPS).forEach(([k,p])=>{let l=document.createElement('label');l.className='check';l.innerHTML=`<input type="checkbox" value="${k}" checked><span>${p.name}<div class="mini">${formulaHTML(p.formula)}</div></span>`;box.appendChild(l);l.querySelector('input').addEventListener('change',()=>{syncPropButtons();generate()})})}
 function syncPropButtons(){let checked=allowedProps();$('#allProps').classList.toggle('active',checked.length===Object.keys(PROPS).length);$('#coreProps').classList.toggle('active',checked.length===Object.values(PROPS).filter(p=>p.core).length && Object.keys(PROPS).filter(k=>PROPS[k].core).every(k=>checked.includes(k)))}
 setupProps();
 $$('#difficultySeg button').forEach(b=>b.onclick=()=>{$$('#difficultySeg button').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.difficulty=b.dataset.diff;generate()});
 $$('input[name=mode]').forEach(r=>r.onchange=()=>{state.mode=r.value;generate()});
 $('#allProps').onclick=()=>{$$('#propertyChecks input').forEach(x=>x.checked=true);syncPropButtons();generate()};
 $('#coreProps').onclick=()=>{$$('#propertyChecks input').forEach(x=>x.checked=PROPS[x.value].core);syncPropButtons();generate()};
-$('#lightBtn').onclick=()=>{document.body.classList.remove('dark');$('#lightBtn').classList.add('active');$('#darkBtn').classList.remove('active');localStorage.setItem('expTheme','light')};
-$('#darkBtn').onclick=()=>{document.body.classList.add('dark');$('#darkBtn').classList.add('active');$('#lightBtn').classList.remove('active');localStorage.setItem('expTheme','dark')};
+$('#lightBtn').onclick=()=>{document.body.classList.remove('dark');$('#lightBtn').classList.add('active');$('#darkBtn').classList.remove('active');saveTheme('light')};
+$('#darkBtn').onclick=()=>{document.body.classList.add('dark');$('#darkBtn').classList.add('active');$('#lightBtn').classList.remove('active');saveTheme('dark')};
 $('#resetStats').onclick=()=>{state.correct=state.attempted=state.streak=0;updateStats()};
 $('#newProblem').onclick=generate;
-if(localStorage.getItem('expTheme')==='dark')$('#darkBtn').click();
+function saveTheme(value){try{localStorage.setItem('expTheme',value)}catch{}}
+try{if(localStorage.getItem('expTheme')==='dark')$('#darkBtn').click();}catch{}
 updateStats();generate();
 })();
 </script>
